@@ -129,6 +129,58 @@ class MCPClient:
         ):
             tool_args["attachment_path"] = md_path
 
+    async def plan_tool_usage(self, query: str, tools: List[dict]) -> List[dict]:
+        """获取计划执行的工具列表"""
+        # 构造系统提示词 system_prompt
+        # 将所有可用工具组织为文本列表插入提示中，并明确指出工具名
+        # 限定返回格式是 JSON，防止其输出错误格式的数据
+        print("\n📤 提交给大模型的工具定义:")
+        print(json.dumps(tools, ensure_ascii=False, indent=2))
+        tool_list_text = "\n".join(
+            [
+                f"- {tool['function']['name']}: {tool['function']['description']}"
+                for tool in tools
+            ]
+        )
+        system_prompt = {
+            "role": "system",
+            "content": (
+                "你是一个智能任务规划助手，用户会给出一句自然语言请求。\n"
+                "你只能从以下工具中选择（严格使用工具名称）：\n"
+                f"{tool_list_text}\n"
+                "如果多个工具需要串联，后续步骤中可以使用 {{上一步工具名}} 占位。\n"
+                "返回格式：JSON 数组，每个对象包含 name 和 arguments 字段。\n"
+                "不要返回自然语言，不要使用未列出的工具名。"
+            ),
+        }
+
+        # 构造对话上下文并调用模型
+        # 将系统提示和用户的自然语言一起作为消息输入，并选用当前的模型
+        planning_messages = [system_prompt, {"role": "user", "content": query}]
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=planning_messages,
+            tools=tools,
+            tool_choice="none",
+        )
+
+        # 提取出模型返回的 JSON 内容
+        content = response.choices[0].message.content.strip()
+        match = re.search(r"```(?:json)?\\s*([\s\S]+?)\\s*```", content)
+        if match:
+            json_text = match.group(1)
+        else:
+            json_text = content
+
+        # 在解析 JSON 之后返回调用计划
+        try:
+            plan = json.loads(json_text)
+            return plan if isinstance(plan, list) else []
+        except Exception as e:
+            print(f"❌ 获取计划执行的工具列表失败: {e}\n原始返回: {content}")
+            return []
+
     async def execute_tool_chain(
         self, query: str, tool_plan: list, md_filename: str, md_path: str
     ) -> list:
@@ -188,7 +240,7 @@ class MCPClient:
         # 获取工具调用计划
         tool_plan = await self.plan_tool_usage(query, self.tools)
 
-        # 执行工具调用链 TODO
+        # 执行工具调用链
         messages = await self.execute_tool_chain(query, tool_plan, md_filename, md_path)
 
         # 生成最终响应
