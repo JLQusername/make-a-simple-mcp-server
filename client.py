@@ -268,3 +268,20 @@ class MCPClient:
 
             except Exception as e:
                 print(f"\n⚠️ 发生错误: {str(e)}")
+
+    async def cleanup(self):
+        await self.exit_stack.aclose()
+
+
+async def main():
+    server_script_path = "D:\\make-a-simple-mcp-server\\server.py"  # 替换成你自己的路径
+    client = MCPClient()
+    try:
+        await client.connect_to_server(server_script_path)
+        await client.chat_loop()
+    finally:
+        await client.cleanup()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
