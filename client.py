@@ -176,3 +176,25 @@ class MCPClient:
             f.write(f"🤵 用户提问：{query}\n\n")
             f.write(f"🤖 模型回复：\n{final_output}\n")
         print(f"📄 对话记录已保存为：{file_path}")
+
+    async def process_query(self, query: str) -> str:
+        """处理用户查询的主流程"""
+        # 准备文件路径
+        md_filename, md_path, txt_filename, txt_path = self.prepare_file_paths(query)
+
+        # 更新查询，添加文件信息
+        query = query.strip() + f" [md_filename={md_filename}] [md_path={md_path}]"
+
+        # 获取工具调用计划
+        tool_plan = await self.plan_tool_usage(query, self.tools)
+
+        # 执行工具调用链
+        messages = await self.execute_tool_chain(query, tool_plan, md_filename, md_path)
+
+        # 生成最终响应
+        final_output = await self.generate_final_response(messages)
+
+        # 保存对话记录
+        self.save_conversation(query, final_output, txt_path)
+
+        return final_output
