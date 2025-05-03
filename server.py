@@ -144,6 +144,55 @@ async def analyze_sentiment(text: str, file_path: str) -> str:
     return file_path
 
 
+@mcp.tool()
+async def send_email_with_attachment(
+    to: str, subject: str, body: str, file_path: str
+) -> str:
+    """
+    发送带附件的邮件。
+
+    参数:
+        to: 收件人邮箱地址
+        subject: 邮件标题
+        body: 邮件正文
+        file_path (str): 保存的 Markdown 文件路径
+
+    返回:
+        邮件发送状态说明
+    """
+
+    # 获取并配置 SMTP 相关信息
+    smtp_server = os.getenv("SMTP_SERVER")
+    smtp_port = int(os.getenv("SMTP_PORT", 465))
+    sender_email = os.getenv("EMAIL_USER")
+    sender_pass = os.getenv("EMAIL_PASS")
+    if not smtp_server:
+        raise ValueError("❌ SMTP_SERVER is not set，请在.env文件中设置")
+    if not sender_email:
+        raise ValueError("❌ EMAIL_USER is not set，请在.env文件中设置")
+    if not sender_pass:
+        raise ValueError("❌ EMAIL_PASS is not set，请在.env文件中设置")
+
+    # 获取附件文件的路径，并进行检查是否存在
+    if not os.path.exists(file_path):
+        raise ValueError(f"❌ 附件路径无效，未找到文件: {file_path}")
+
+    # 创建邮件并设置内容
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = sender_email
+    msg["To"] = to
+    msg.set_content(body)
+
+    # 添加附件
+    add_attachment_to_email(msg, file_path)
+
+    # 发送邮件
+    return send_email(
+        msg, to, smtp_server, smtp_port, sender_email, sender_pass, file_path
+    )
+
+
 def add_attachment_to_email(msg: EmailMessage, file_path: str):
     """添加附件并发送邮件"""
     try:
