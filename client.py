@@ -131,7 +131,7 @@ class MCPClient:
 
     async def execute_tool_chain(
         self, query: str, tool_plan: list, md_filename: str, md_path: str
-    ) -> tuple[list, dict]:
+    ) -> list:
         """执行工具调用链"""
         tool_outputs = {}
         messages = [{"role": "user", "content": query}]
@@ -160,4 +160,19 @@ class MCPClient:
                 }
             )
 
-        return messages, tool_outputs
+        return messages
+
+    async def generate_final_response(self, messages: list) -> str:
+        """生成最终响应"""
+        final_response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+        )
+        return final_response.choices[0].message.content
+
+    def save_conversation(self, query: str, final_output: str, file_path: str):
+        """保存对话记录"""
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(f"🤵 用户提问：{query}\n\n")
+            f.write(f"🤖 模型回复：\n{final_output}\n")
+        print(f"📄 对话记录已保存为：{file_path}")
