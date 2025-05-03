@@ -31,7 +31,7 @@ class MCPClient:
         self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
         self.session: Optional[ClientSession] = None
 
-    async def connect(self, server_script_path: str):
+    async def connect_to_server(self, server_script_path: str):
         """连接到服务器 完成初始化阶段"""
         # 判断服务器脚本类型
         is_py = server_script_path.endswith(".py")
