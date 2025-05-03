@@ -32,7 +32,7 @@ class MCPClient:
         self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
         self.session: Optional[ClientSession] = None
 
-    # 与服务器建立连接
+    # 与服务器建立连接 初始化阶段
     async def connect(self, server_script_path: str):
         # 判断服务器脚本类型
         is_py = server_script_path.endswith(".py")
@@ -64,9 +64,13 @@ class MCPClient:
         # 初始化客户端会话
         await self.session.initialize()
 
-        # 获取工具列表并打印
+        # 获取并打印工具列表
+        await self.list_tools()
+
+    async def list_tools(self):
+        """获取并打印可用的工具列表"""
         response = await self.session.list_tools()
-        tools = response.tools
+        self.tools = response.tools
         print("已连接到服务器，🔧 工具列表:")
         for tool in tools:
             print(f"  - {tool.name}: {tool.description}")
