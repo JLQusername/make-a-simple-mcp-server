@@ -188,7 +188,7 @@ class MCPClient:
         # 获取工具调用计划
         tool_plan = await self.plan_tool_usage(query, self.tools)
 
-        # 执行工具调用链
+        # 执行工具调用链 TODO
         messages = await self.execute_tool_chain(query, tool_plan, md_filename, md_path)
 
         # 生成最终响应
@@ -198,3 +198,21 @@ class MCPClient:
         self.save_conversation(query, final_output, txt_path)
 
         return final_output
+
+    async def chat_loop(self):
+        # 初始化提示信息
+        print("\n🤖花果茶 MCP 客户端已启动！输入 'quit' 退出")
+
+        # 进入主循环中等待用户输入
+        while True:
+            try:
+                query = input("\n你: ").strip()
+                if query.lower() == "quit":
+                    break
+
+                # 处理用户的提问，并返回结果
+                response = await self.process_query(query)
+                print(f"\n🤖 AI: {response}")
+
+            except Exception as e:
+                print(f"\n⚠️ 发生错误: {str(e)}")
