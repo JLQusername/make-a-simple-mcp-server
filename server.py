@@ -3,10 +3,12 @@ import json
 import smtplib
 from datetime import datetime
 from email.message import EmailMessage
+from email.header import Header
 import httpx
 from mcp.server.fastmcp import FastMCP
 from dotenv import load_dotenv
 from openai import OpenAI
+from email.utils import encode_rfc2231
 
 load_dotenv()
 
@@ -130,10 +132,19 @@ async def analyze_sentiment(text: str, file_path: str) -> str:
     prompt = f"请对以下新闻内容进行情绪倾向分析，并说明原因：\n\n{text}"
 
     # 向模型发送请求，并处理返回的结果
+    client = OpenAI(api_key=api_key, base_url=base_url)
     response = client.chat.completions.create(
-        model=model, messages=[{"role": "user", "content": prompt}]
+        model=model, messages=[{"role": "user", "content": prompt}], stream=True
     )
-    result = response.choices[0].message.content.strip()
+
+    result = ""
+    for chunk in response:
+        if hasattr(chunk, "choices") and chunk.choices:
+            delta = chunk.choices[0].delta
+            if hasattr(delta, "content") and delta.content:
+                result += delta.content
+
+    result = result.strip()
 
     # 生成 Markdown 格式的舆情分析报告，并存放进设置好的输出目录
     markdown = generate_sentiment_report(text, result)
@@ -179,10 +190,10 @@ async def send_email_with_attachment(
 
     # 创建邮件并设置内容
     msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = sender_email
-    msg["To"] = to
-    msg.set_content(body)
+    msg["Subject"] = str(Header(subject, "utf-8"))
+    msg["From"] = str(Header(sender_email, "utf-8"))
+    msg["To"] = str(Header(to, "utf-8"))
+    msg.set_content(body, charset="utf-8")
 
     # 添加附件
     add_attachment_to_email(msg, file_path)
@@ -203,7 +214,8 @@ def add_attachment_to_email(msg: EmailMessage, file_path: str):
                 file_data,
                 maintype="application",
                 subtype="octet-stream",
-                filename=file_name,
+                filename="",
+                params={"filename*": encode_rfc2231(file_name, "utf-8")},
             )
     except Exception as e:
         return f"❌ 附件读取失败: {str(e)}"
@@ -225,7 +237,7 @@ def send_email(
             server.send_message(msg)
         return f"✅ 邮件已成功发送给 {to}，附件路径: {file_path}"
     except Exception as e:
-        return f"❌ 邮件发送失败: {str(e)}"
+        return f"❌ 邮件发送失败: {str(e)} , 附件路径: {file_path}, 收件人邮箱: {to}, 发件人邮箱: {sender_email}, 发件人密码: {sender_pass}, 服务器地址: {smtp_server}, 服务器端口: {smtp_port}, 邮件: {msg}, 错误信息: {str(e)}"
 
 
 if __name__ == "__main__":
