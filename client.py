@@ -15,7 +15,6 @@ load_dotenv()
 
 class MCPClient:
 
-    # 初始化客户端配置
     def __init__(self):
         self.exit_stack = AsyncExitStack()
         self.api_key = os.getenv("DASHSCOPE_API_KEY")
@@ -32,8 +31,8 @@ class MCPClient:
         self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
         self.session: Optional[ClientSession] = None
 
-    # 与服务器建立连接 初始化阶段
     async def connect(self, server_script_path: str):
+        """连接到服务器 完成初始化阶段"""
         # 判断服务器脚本类型
         is_py = server_script_path.endswith(".py")
         is_js = server_script_path.endswith(".js")
@@ -68,9 +67,40 @@ class MCPClient:
         await self.list_tools()
 
     async def list_tools(self):
-        """获取并打印可用的工具列表"""
+        """请求可用工具列表"""
         response = await self.session.list_tools()
-        self.tools = response.tools
-        print("已连接到服务器，🔧 工具列表:")
-        for tool in tools:
-            print(f"  - {tool.name}: {tool.description}")
+        self.tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "input_schema": tool.input_schema,
+                },
+            }
+            for tool in response.tools
+        ]
+        print(f"已连接到服务器，🔧 工具列表: {self.tools}")
+
+    def clean_filename(text: str) -> str:
+        """清理文本，生成合法的文件名"""
+        text = text.strip()
+        text = re.sub(r"[\\/:*?\"<>|]", "", text)
+        return text[:50]
+
+    def prepare_file_paths(self, query: str) -> tuple[str, str, str, str]:
+        """准备文件路径相关信息"""
+        safe_filename = self.clean_filename(query)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # 准备 markdown 报告路径
+        md_filename = f"{safe_filename}_{timestamp}.md"
+        os.makedirs("./sentiment_reports", exist_ok=True)
+        md_path = os.path.join("./sentiment_reports", md_filename)
+
+        # 准备对话记录路径
+        txt_filename = f"{safe_filename}_{timestamp}.txt"
+        os.makedirs("./llm_outputs", exist_ok=True)
+        txt_path = os.path.join("./llm_outputs", txt_filename)
+
+        return md_filename, md_path, txt_filename, txt_path
