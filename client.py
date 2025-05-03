@@ -40,7 +40,7 @@ class MCPClient:
             raise ValueError("❌ 服务器脚本类型错误，请使用.py或.js文件")
 
         # 确定启动命令
-        command = "python", server_script_path if is_py else "node"
+        command = "python" if is_py else "node"
 
         # 构造 MCP 所需要的服务器参数
         server_parameters = StdioServerParameters(
@@ -274,7 +274,9 @@ class MCPClient:
 
 
 async def main():
-    server_script_path = "D:\\make-a-simple-mcp-server\\server.py"  # 替换成你自己的路径
+    server_script_path = (
+        "D:\\MCP Study\\make-a-simple-mcp-server\\server.py"  # 替换成你自己的路径
+    )
     client = MCPClient()
     try:
         await client.connect_to_server(server_script_path)
