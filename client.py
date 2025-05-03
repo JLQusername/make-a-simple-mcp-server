@@ -104,3 +104,60 @@ class MCPClient:
         txt_path = os.path.join("./llm_outputs", txt_filename)
 
         return md_filename, md_path, txt_filename, txt_path
+
+    def resolve_tool_args(
+        self,
+        tool_name: str,
+        tool_args: dict,
+        tool_outputs: dict,
+        md_filename: str,
+        md_path: str,
+    ):
+        # 处理参数引用
+        for key, val in tool_args.items():
+            if isinstance(val, str) and val.startswith("{{") and val.endswith("}}"):
+                ref_key = val.strip("{} ")
+                resolved_val = tool_outputs.get(ref_key, val)
+                tool_args[key] = resolved_val
+
+        # 注入统一的文件名或路径（用于分析和邮件）
+        if tool_name == "analyze_sentiment" and "filename" not in tool_args:
+            tool_args["filename"] = md_filename
+        if (
+            tool_name == "send_email_with_attachment"
+            and "attachment_path" not in tool_args
+        ):
+            tool_args["attachment_path"] = md_path
+
+    async def execute_tool_chain(
+        self, query: str, tool_plan: list, md_filename: str, md_path: str
+    ) -> tuple[list, dict]:
+        """执行工具调用链"""
+        tool_outputs = {}
+        messages = [{"role": "user", "content": query}]
+
+        for step in tool_plan:
+            tool_name = step["tool"]
+            tool_args = step["arguments"]
+
+            # 处理参数引用
+            self.resolve_tool_args(
+                tool_name, tool_args, tool_outputs, md_filename, md_path
+            )
+
+            # 执行工具调用
+            result = await self.session.call_tool(tool_name, tool_args)
+
+            # 更新工具输出
+            tool_outputs[tool_name] = result.content[0].text
+
+            # 添加工具调用记录
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_name,
+                    "content": result.content[0].text,
+                }
+            )
+
+        return messages, tool_outputs
