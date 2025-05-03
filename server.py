@@ -52,7 +52,7 @@ async def search_google_news(keyword: str) -> str:
         for item in data["news"][:5]
     ]
 
-    # 将新闻结果以带有时间戳命名后的 JSON 格式文件的形式保存在本地指定的路径 TODO
+    # 将新闻结果以带有时间戳命名后的 JSON 格式文件的形式保存在本地指定的路径
     file_path = save_news_to_file(articles)
 
     return (
@@ -60,3 +60,16 @@ async def search_google_news(keyword: str) -> str:
         f"{json.dumps(articles, ensure_ascii=False, indent=2)}\n"
         f"📄 已保存到：{file_path}"
     )
+
+
+def save_news_to_file(articles: list) -> str:
+    """将新闻结果以带有时间戳命名后的 JSON 格式文件的形式保存在本地指定的路径"""
+    output_dir = "./google_news"
+    os.makedirs(output_dir, exist_ok=True)
+    filename = f"google_news_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    file_path = os.path.join(output_dir, filename)
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(articles, f, ensure_ascii=False, indent=2)
+
+    return file_path
