@@ -30,7 +30,7 @@ async def fetch_news_data(api_key: str, keyword: str) -> dict:
     return data["news"]
 
 
-@mcp.tool  # 装饰器，将函数注册为工具
+@mcp.tool()  # 装饰器，将函数注册为工具
 async def search_google_news(keyword: str) -> str:
     """
     使用 Serper API（Google Search 封装）根据关键词搜索新闻内容，返回前5条标题、描述和链接。
@@ -226,3 +226,7 @@ def send_email(
         return f"✅ 邮件已成功发送给 {to}，附件路径: {file_path}"
     except Exception as e:
         return f"❌ 邮件发送失败: {str(e)}"
+
+
+if __name__ == "__main__":
+    mcp.run(transport="stdio")
