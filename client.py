@@ -121,8 +121,8 @@ class MCPClient:
                 tool_args[key] = resolved_val
 
         # 注入统一的文件名或路径（用于分析和邮件）
-        if tool_name == "analyze_sentiment" and "filename" not in tool_args:
-            tool_args["filename"] = md_filename
+        if tool_name == "analyze_sentiment" and "file_path" not in tool_args:
+            tool_args["file_path"] = md_path
         if (
             tool_name == "send_email_with_attachment"
             and "attachment_path" not in tool_args

@@ -142,3 +142,38 @@ async def analyze_sentiment(text: str, file_path: str) -> str:
         f.write(markdown)
 
     return file_path
+
+
+def add_attachment_to_email(msg: EmailMessage, file_path: str):
+    """添加附件并发送邮件"""
+    try:
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+            file_name = os.path.basename(file_path)
+            msg.add_attachment(
+                file_data,
+                maintype="application",
+                subtype="octet-stream",
+                filename=file_name,
+            )
+    except Exception as e:
+        return f"❌ 附件读取失败: {str(e)}"
+
+
+def send_email(
+    msg: EmailMessage,
+    to: str,
+    smtp_server: str,
+    smtp_port: int,
+    sender_email: str,
+    sender_pass: str,
+    file_path: str,
+):
+    """发送邮件"""
+    try:
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+            server.login(sender_email, sender_pass)
+            server.send_message(msg)
+        return f"✅ 邮件已成功发送给 {to}，附件路径: {file_path}"
+    except Exception as e:
+        return f"❌ 邮件发送失败: {str(e)}"
