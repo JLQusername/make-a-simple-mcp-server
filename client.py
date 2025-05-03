@@ -31,3 +31,42 @@ class MCPClient:
         # 初始化MCP客户端
         self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
         self.session: Optional[ClientSession] = None
+
+    # 与服务器建立连接
+    async def connect(self, server_script_path: str):
+        # 判断服务器脚本类型
+        is_py = server_script_path.endswith(".py")
+        is_js = server_script_path.endswith(".js")
+        if not (is_py or is_js):
+            raise ValueError("❌ 服务器脚本类型错误，请使用.py或.js文件")
+
+        # 确定启动命令
+        command = "python", server_script_path if is_py else "node"
+
+        # 构造 MCP 所需要的服务器参数
+        server_parameters = StdioServerParameters(
+            command=command, args=[server_script_path], env=None
+        )
+
+        # 启动 MCP 工具服务进程，并建立 stdio 通信
+        stdio_transport = await self.exit_stack.enter_async_context(
+            stdio_client(server_parameters)
+        )
+
+        # 拆包通信通道，用于读取服务端返回的数据，并向服务端发送请求
+        self.stdio, self.writer = stdio_transport
+
+        # 创建 MCP 客户端会话对象
+        self.session = await self.exit_stack.enter_async_context(
+            ClientSession(self.stdio, self.writer)
+        )
+
+        # 初始化客户端会话
+        await self.session.initialize()
+
+        # 获取工具列表并打印
+        response = await self.session.list_tools()
+        tools = response.tools
+        print("已连接到服务器，🔧 工具列表:")
+        for tool in tools:
+            print(f"  - {tool.name}: {tool.description}")
