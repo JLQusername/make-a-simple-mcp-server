@@ -75,14 +75,14 @@ class MCPClient:
                 "function": {
                     "name": tool.name,
                     "description": tool.description,
-                    "input_schema": tool.input_schema,
+                    "input_schema": tool.inputSchema,
                 },
             }
             for tool in response.tools
         ]
         print(f"已连接到服务器，🔧 工具列表: {self.tools}")
 
-    def clean_filename(text: str) -> str:
+    def clean_filename(self, text: str) -> str:
         """清理文本，生成合法的文件名"""
         text = text.strip()
         text = re.sub(r"[\\/:*?\"<>|]", "", text)
@@ -94,7 +94,13 @@ class MCPClient:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         # 准备 markdown 报告路径
-        md_filename = f"{safe_filename}_{timestamp}.md"
+        keyword_match = re.search(
+            r"(关于|分析|查询|搜索|查看)([^的\s，。、？\n]+)", query
+        )
+        keyword = keyword_match.group(2) if keyword_match else "分析对象"
+        safe_keyword = re.sub(r'[\\/:*?"<>|]', "", keyword)[:20]
+
+        md_filename = f"{safe_keyword}_{timestamp}.md"
         os.makedirs("./sentiment_reports", exist_ok=True)
         md_path = os.path.join("./sentiment_reports", md_filename)
 
@@ -110,7 +116,6 @@ class MCPClient:
         tool_name: str,
         tool_args: dict,
         tool_outputs: dict,
-        md_filename: str,
         md_path: str,
     ):
         # 处理参数引用
@@ -121,13 +126,11 @@ class MCPClient:
                 tool_args[key] = resolved_val
 
         # 注入统一的文件名或路径（用于分析和邮件）
-        if tool_name == "analyze_sentiment" and "filename" not in tool_args:
-            tool_args["filename"] = md_filename
         if (
-            tool_name == "send_email_with_attachment"
-            and "attachment_path" not in tool_args
-        ):
-            tool_args["attachment_path"] = md_path
+            tool_name == "analyze_sentiment"
+            or tool_name == "send_email_with_attachment"
+        ) and "file_path" not in tool_args:
+            tool_args["file_path"] = md_path
 
     async def plan_tool_usage(self, query: str, tools: List[dict]) -> List[dict]:
         """获取计划执行的工具列表"""
@@ -163,39 +166,49 @@ class MCPClient:
             messages=planning_messages,
             tools=tools,
             tool_choice="none",
+            stream=True,
         )
 
-        # 提取出模型返回的 JSON 内容
-        content = response.choices[0].message.content.strip()
-        match = re.search(r"```(?:json)?\\s*([\s\S]+?)\\s*```", content)
+        content = ""
+        for chunk in response:
+            if hasattr(chunk, "choices") and chunk.choices:
+                delta = chunk.choices[0].delta
+                if hasattr(delta, "content") and delta.content:
+                    content += delta.content
+
+        match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", content)
         if match:
             json_text = match.group(1)
         else:
             json_text = content
 
-        # 在解析 JSON 之后返回调用计划
+        # 去除 /* ... */ 注释
+        json_text = re.sub(r"/\*[\s\S]*?\*/", "", json_text)
+        # 去除 // ... 注释
+        json_text = re.sub(r"//.*", "", json_text)
+
+        print(f"🟡 解析前的内容: {repr(json_text)}")
+
         try:
             plan = json.loads(json_text)
             return plan if isinstance(plan, list) else []
         except Exception as e:
-            print(f"❌ 获取计划执行的工具列表失败: {e}\n原始返回: {content}")
+            print(f"❌ 获取计划执行的工具列表失败: {e}\n原始返回: {json_text}")
             return []
 
     async def execute_tool_chain(
-        self, query: str, tool_plan: list, md_filename: str, md_path: str
+        self, query: str, tool_plan: list, md_path: str
     ) -> list:
         """执行工具调用链"""
         tool_outputs = {}
         messages = [{"role": "user", "content": query}]
 
         for step in tool_plan:
-            tool_name = step["tool"]
+            tool_name = step["name"]
             tool_args = step["arguments"]
 
             # 处理参数引用
-            self.resolve_tool_args(
-                tool_name, tool_args, tool_outputs, md_filename, md_path
-            )
+            self.resolve_tool_args(tool_name, tool_args, tool_outputs, md_path)
 
             # 执行工具调用
             result = await self.session.call_tool(tool_name, tool_args)
@@ -206,21 +219,34 @@ class MCPClient:
             # 添加工具调用记录
             messages.append(
                 {
-                    "role": "tool",
+                    "role": "assistant",
                     "tool_call_id": tool_name,
                     "content": result.content[0].text,
                 }
             )
 
+            print(f"🔧 执行工具: {tool_name}，参数: {tool_args}")
+            print(f"🔧 工具输出: {result.content[0].text}")
+
         return messages
 
     async def generate_final_response(self, messages: list) -> str:
         """生成最终响应"""
-        final_response = await self.client.chat.completions.create(
+        response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
+            stream=True,
         )
-        return final_response.choices[0].message.content
+
+        final_output = ""
+        for chunk in response:
+            # 兼容不同模型的字段名
+            if hasattr(chunk, "choices") and chunk.choices:
+                delta = chunk.choices[0].delta
+                if hasattr(delta, "content") and delta.content:
+                    final_output += delta.content
+
+        return final_output
 
     def save_conversation(self, query: str, final_output: str, file_path: str):
         """保存对话记录"""
@@ -241,7 +267,7 @@ class MCPClient:
         tool_plan = await self.plan_tool_usage(query, self.tools)
 
         # 执行工具调用链
-        messages = await self.execute_tool_chain(query, tool_plan, md_filename, md_path)
+        messages = await self.execute_tool_chain(query, tool_plan, md_path)
 
         # 生成最终响应
         final_output = await self.generate_final_response(messages)
