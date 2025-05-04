@@ -187,8 +187,6 @@ class MCPClient:
         # 去除 // ... 注释
         json_text = re.sub(r"//.*", "", json_text)
 
-        print(f"🟡 解析前的内容: {repr(json_text)}")
-
         try:
             plan = json.loads(json_text)
             return plan if isinstance(plan, list) else []
@@ -300,9 +298,7 @@ class MCPClient:
 
 
 async def main():
-    server_script_path = (
-        "D:\\MCP Study\\make-a-simple-mcp-server\\server.py"  # 替换成你自己的路径
-    )
+    server_script_path = "server.py"  # 替换成你自己的路径
     client = MCPClient()
     try:
         await client.connect_to_server(server_script_path)
