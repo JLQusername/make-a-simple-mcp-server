@@ -104,8 +104,6 @@ class MCPClient:
         os.makedirs("./sentiment_reports", exist_ok=True)
         md_path = os.path.join("./sentiment_reports", md_filename)
 
-        md_path = "./sentiment_reports/text.md"
-
         # 准备对话记录路径
         txt_filename = f"{safe_filename}_{timestamp}.txt"
         os.makedirs("./llm_outputs", exist_ok=True)
