@@ -237,7 +237,7 @@ def send_email(
             server.send_message(msg)
         return f"✅ 邮件已成功发送给 {to}，附件路径: {file_path}"
     except Exception as e:
-        return f"❌ 邮件发送失败: {str(e)} , 附件路径: {file_path}, 收件人邮箱: {to}, 发件人邮箱: {sender_email}, 发件人密码: {sender_pass}, 服务器地址: {smtp_server}, 服务器端口: {smtp_port}, 邮件: {msg}, 错误信息: {str(e)}"
+        return f"❌ 邮件发送失败: {str(e)}"
 
 
 if __name__ == "__main__":
