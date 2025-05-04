@@ -31,25 +31,25 @@ EMAIL_PASS=你的授权码
 
 运行`client.py`：
 
-![c4337ae2bcbe3bbe31874c071125cde](img\client运行1.png)
+![c4337ae2bcbe3bbe31874c071125cde](https://github.com/JLQusername/make-a-simple-mcp-server/blob/main/img/client运行1.png)
 
-![5e499aad66c0f241f6cb7cd204aabe9](img\client运行2.png)
+![5e499aad66c0f241f6cb7cd204aabe9](https://github.com/JLQusername/make-a-simple-mcp-server/blob/main/img/client运行2.png)
 
-![c26006e04c550bc58806b413f7a2644](img\client运行3.png)
+![c26006e04c550bc58806b413f7a2644](https://github.com/JLQusername/make-a-simple-mcp-server/blob/main/img/client运行3.png)
 
-![df953e5433dd6b3c088da845576ced4](img\client运行4.png)
+![df953e5433dd6b3c088da845576ced4](https://github.com/JLQusername/make-a-simple-mcp-server/blob/main/img/client运行4.png)
 
 可以看到，对应的文件也被保存了
 
-![ef9bf0a1f695c620fa849a2a5e64911](img\client运行5.png)
+![ef9bf0a1f695c620fa849a2a5e64911](https://github.com/JLQusername/make-a-simple-mcp-server/blob/main/img/client运行5.png)
 
-![1032ecffeeea0ba0bc7cc7f43fec414](img\ggnews.png)
+![1032ecffeeea0ba0bc7cc7f43fec414](https://github.com/JLQusername/make-a-simple-mcp-server/blob/main/img/ggnews.png)
 
-![cb54508c73bb535659e4b8127424c46](img\sentimel_md.png)
+![cb54508c73bb535659e4b8127424c46](https://github.com/JLQusername/make-a-simple-mcp-server/blob/main/img/sentimel_md.png)
 
-![6be28f621ee010e21532ab30e94615d](img\chat.png)
+![6be28f621ee010e21532ab30e94615d](https://github.com/JLQusername/make-a-simple-mcp-server/blob/main/img/chat.png)
 
 输入quit就可以结束对话
 
-![66a1453198ccba8a93565cb45e02e71](img\client运行6.png)
+![66a1453198ccba8a93565cb45e02e71](https://github.com/JLQusername/make-a-simple-mcp-server/blob/main/img/client运行6.png)
 
